@@ -23,7 +23,7 @@ namespace OGL
         private BufferObject<float> _vbo;
         private readonly BufferObject<uint> _ebo;
         private readonly uint _vaoHandle;
-        private float _scale = 0.25f;
+        private float _scale = 1.0f;
 
         private Texture _texture;
         
@@ -39,13 +39,13 @@ namespace OGL
                 CreateVertices();
                 CreateIndices();
 
-                _texture = new Texture(_gl, "silk.png");
+                _texture = new Texture(_gl, "Resources\\silk.png");
                 
                 //CalculateNormals();
 
                
                 
-                var img = Image.Load<Rgb24>(@"Luna\normalmap.png");
+                var img = Image.Load<Rgb24>(@"Resources\Luna\normalmap.png");
                 
                 img.ProcessPixelRows(accessor =>
                 {
@@ -71,7 +71,7 @@ namespace OGL
                     }
                 });
                 
-                ImageHelper.SavePng("test.png", _vertices.SelectMany(x =>
+                ImageHelper.SavePng("Resources\\test.png", _vertices.SelectMany(x =>
                 {
                     // convert normals to RGB values and convert each RGB value to 
                     // a byte array
@@ -147,27 +147,46 @@ namespace OGL
 
         private void AddIndicesAlternatingWinding()
         {
-            for (int y = 0; y < _height - 1; y++)
-            {
-                if (y % 2 == 0) // even rows
-                {
-                    for (int x = 0; x < _width; x++)
-                    {
-                        _indices.Add((uint)(x + y * _width));
-                        _indices.Add((uint)(x + (y + 1) * _width));
-                    }
+            // for (int y = 0; y < _height - 1; y++)
+            // {
+            //     if (y % 2 == 0) // even rows
+            //     {
+            //         for (int x = 0; x < _width; x++)
+            //         {
+            //             _indices.Add((uint)(x + y * _width));
+            //             _indices.Add((uint)(x + (y + 1) * _width));
+            //         }
+            //
+            //         _indices.Add((uint)(_width - 1 + y * _width));
+            //     }
+            //     else // odd rows
+            //     {
+            //         for (int x = _width - 1; x >= 0; x--)
+            //         {
+            //             _indices.Add((uint)(x + (y + 1) * _width));
+            //             _indices.Add((uint)(x + y * _width));
+            //         }
+            //
+            //         _indices.Add((uint)(y * _width));
+            //     }
+            // }
 
-                    _indices.Add((uint)(_width - 1 + y * _width));
+
+            for (int y = 0; y < _height - 1; y++) {
+                if (y > 0) {
+                    // Degenerate begin: repeat first vertex
+                    _indices.Add((uint)(y * _height));
                 }
-                else // odd rows
-                {
-                    for (int x = _width - 1; x >= 0; x--)
-                    {
-                        _indices.Add((uint)(x + (y + 1) * _width));
-                        _indices.Add((uint)(x + y * _width));
-                    }
-
-                    _indices.Add((uint)(y * _width));
+ 
+                for (int x = 0; x < _width; x++) {
+                    // One part of the strip
+                    _indices.Add((uint)(y * _height + x));
+                    _indices.Add((uint)((y + 1) * _height + x));
+                }
+ 
+                if (y < _height - 2) {
+                    // Degenerate end: repeat last vertex
+                    _indices.Add((uint)((y + 1) * _height + (_width - 1)));
                 }
             }
         }
@@ -203,7 +222,7 @@ namespace OGL
             }
             
             
-            var img = Image.Load<Rgb24>(@"Luna\heightmap.png");
+            var img = Image.Load<Rgb24>(@"Resources\Luna\heightmap.png");
             
             img.ProcessPixelRows(accessor =>
             {
@@ -220,7 +239,7 @@ namespace OGL
                     {
                         // Get a reference to the pixel at position x
                         ref Rgb24 pixel = ref pixelRow[x];
-                        var value = (((pixel.R + pixel.G + pixel.B) / 3) / 255.0f) * 8.0f;
+                        var value = (((pixel.R + pixel.G + pixel.B) / 3) / 255.0f) * 30.0f;
                         
                         _vertices[x + y * accessor.Height].Position += new Vector3(0.0f,  value, 0.0f);
                         
