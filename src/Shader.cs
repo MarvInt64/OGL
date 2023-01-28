@@ -41,7 +41,7 @@ namespace OGL
             int location = _gl.GetUniformLocation(_handle, name);
             if (location == -1)
             {
-                throw new Exception($"{name} uniform not found on shader.");
+                //throw new Exception($"{name} uniform not found on shader.");
             }
             _gl.Uniform1(location, value);
         }
@@ -52,7 +52,7 @@ namespace OGL
             int location = _gl.GetUniformLocation(_handle, name);
             if (location == -1)
             {
-                throw new Exception($"{name} uniform not found on shader.");
+                //throw new Exception($"{name} uniform not found on shader.");
             }
             _gl.UniformMatrix4(location, 1, false, (float*) &value);
         }
@@ -73,7 +73,7 @@ namespace OGL
             int location = _gl.GetUniformLocation(_handle, name);
             if (location == -1)
             {
-                throw new Exception($"{name} uniform not found on shader.");
+                //throw new Exception($"{name} uniform not found on shader.");
             }
             _gl.Uniform1(location, value);
         }
@@ -92,7 +92,7 @@ namespace OGL
             string infoLog = _gl.GetShaderInfoLog(handle);
             if (!string.IsNullOrWhiteSpace(infoLog))
             {
-                throw new Exception($"Error compiling shader of type {type}, failed with error {infoLog}");
+                //throw new Exception($"Error compiling shader of type {type}, failed with error {infoLog}");
             }
 
             return handle;

@@ -24,8 +24,6 @@ namespace OGL
         private readonly BufferObject<uint> _ebo;
         private readonly uint _vaoHandle;
         private float _scale = 1.0f;
-
-        private Texture _texture;
         
         public Terrain(GL gl, int width, int height)
         {
@@ -39,11 +37,7 @@ namespace OGL
                 CreateVertices();
                 CreateIndices();
 
-                _texture = new Texture(_gl, "Resources\\silk.png");
-                
                 //CalculateNormals();
-
-               
                 
                 var img = Image.Load<Rgb24>(@"Resources\Luna\normalmap.png");
                 
@@ -71,13 +65,13 @@ namespace OGL
                     }
                 });
                 
-                ImageHelper.SavePng("Resources\\test.png", _vertices.SelectMany(x =>
-                {
-                    // convert normals to RGB values and convert each RGB value to 
-                    // a byte array
-                    var rgb = x.Normal.ToRgb();
-                    return new[] {rgb.r, rgb.b, rgb.g };
-                }).ToArray(), _width, height);
+                // ImageHelper.SavePng("Resources\\test.png", _vertices.SelectMany(x =>
+                // {
+                //     // convert normals to RGB values and convert each RGB value to 
+                //     // a byte array
+                //     var rgb = x.Normal.ToRgb();
+                //     return new[] {rgb.r, rgb.b, rgb.g };
+                // }).ToArray(), _width, height);
 
                 _vaoHandle  = _gl.GenVertexArray();
                 _vbo = new BufferObject<float>(_gl, _vertices.SelectMany(x => x.ToArray()).ToArray(), BufferTargetARB.ArrayBuffer);
@@ -170,8 +164,7 @@ namespace OGL
             //         _indices.Add((uint)(y * _width));
             //     }
             // }
-
-
+            
             for (int y = 0; y < _height - 1; y++) {
                 if (y > 0) {
                     // Degenerate begin: repeat first vertex

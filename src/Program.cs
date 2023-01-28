@@ -27,6 +27,8 @@ namespace OGL
         
         private static Terrain _terrain;
         private static Shader _terrainShader;
+
+        private static Vector3 _playerVelocity = Vector3.Zero;
         
         private static readonly float[] Vertices =
         {
@@ -80,6 +82,9 @@ namespace OGL
             1, 2, 3
         };
 
+        private static Texture _textureBump;
+        private static Vector3 _lightPosition = new Vector3(200, 200, 50);
+
         private static void Main(string[] args)
         {
             var options = WindowOptions.Default;
@@ -123,8 +128,8 @@ namespace OGL
 
             _shader = new Shader(_gl, "Resources\\shader.vert", "Resources\\shader.frag");
             _terrainShader = new Shader(_gl, "Resources\\terrain.vert", "Resources\\terrain.frag");
-            _texture = new Texture(_gl, "Resources\\silk.png");
-
+            _texture = new Texture(_gl, "Resources\\Luna\\texture0.jpg");
+            _textureBump = new Texture(_gl, "Resources\\Luna\\bump.jpg");
             _terrain = new Terrain(_gl, 1024, 1024);
         }
 
@@ -135,30 +140,33 @@ namespace OGL
             if (_primaryKeyboard.IsKeyPressed(Key.W))
             {
                 //Move forwards
-                _camera.CameraPosition += moveSpeed * _camera.CameraFront;
+                _camera.Position += moveSpeed * _camera.Front;
             }
             if (_primaryKeyboard.IsKeyPressed(Key.S))
             {
                 //Move backwards
-                _camera.CameraPosition -= moveSpeed * _camera.CameraFront;
+                _camera.Position -= moveSpeed * _camera.Front;
             }
             if (_primaryKeyboard.IsKeyPressed(Key.A))
             {
                 //Move left
-                _camera.CameraPosition -= Vector3.Normalize(Vector3.Cross(_camera.CameraFront, _camera.CameraUp)) * moveSpeed;
+                _camera.Position -= Vector3.Normalize(Vector3.Cross(_camera.Front, _camera.Up)) * moveSpeed;
             }
             if (_primaryKeyboard.IsKeyPressed(Key.D))
             {
                 //Move right
-                _camera.CameraPosition += Vector3.Normalize(Vector3.Cross(_camera.CameraFront, _camera.CameraUp)) * moveSpeed;
+                _camera.Position += Vector3.Normalize(Vector3.Cross(_camera.Front, _camera.Up)) * moveSpeed;
             }
           
-            Console.WriteLine(_camera.CameraPosition);
-            // var tIndex = ((int)_cameraPosition.X + (int)_cameraPosition.Z * _terrain._width);
-            // var tpos = tIndex <= _terrain._vertices.Count ? _terrain._vertices[tIndex].Position : _cameraPosition;
+            //Console.WriteLine(_camera.CameraPosition);
+           
+            // _playerVelocity.Y -= 9.81f * (float)deltaTime;
+            //
+            // var tIndex = ((int)_camera.CameraPosition.X + (int)_camera.CameraPosition.Z * _terrain._width);
+            // var tpos = tIndex <= _terrain._vertices.Count ? _terrain._vertices[tIndex].Position : _camera.CameraPosition;
             // tpos.Y += 1.7f;
-            //     _cameraPosition = new  Vector3(_cameraPosition.X, Vector3.Lerp(_cameraPosition, tpos, (float)(8.2f * deltaTime)).Y, _cameraPosition.Z);
-         
+            // _camera.CameraPosition = new  Vector3(_camera.CameraPosition.X, Vector3.Lerp(_camera.CameraPosition, tpos, (float)(8.2f * deltaTime)).Y, _camera.CameraPosition.Z);
+
         }
 
         private static unsafe void OnRender(double deltaTime)
@@ -167,66 +175,94 @@ namespace OGL
             _gl.Clear((uint) (ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit));
 
             _vao.Bind();
-            _texture.Bind();
+          
             _shader.Use();
-            _shader.SetUniform("uTexture0", 0);
 
             //Use elapsed time to convert to radians to allow our cube to rotate over time
             var difference = (float) (_window.Time * 100);
 
             var model = Matrix4x4.Identity;
-            var view = Matrix4x4.CreateLookAt(_camera.CameraPosition, _camera.CameraPosition + _camera.CameraFront, _camera.CameraUp);
-            var projection = Matrix4x4.CreatePerspectiveFieldOfView(MathHelper.DegreesToRadians(_camera.CameraZoom), Width / Height, 0.1f, 1000.0f);
+            var view = Matrix4x4.CreateLookAt(_camera.Position, _camera.Position + _camera.Front, _camera.Up);
+            var projection = Matrix4x4.CreatePerspectiveFieldOfView(MathHelper.DegreesToRadians(_camera.Zoom), Width / Height, 0.1f, 1000.0f);
 
-            _shader.SetUniform("uModel", model);
+            _shader.SetUniform("uModel",  Matrix4x4.CreateTranslation(_lightPosition.X, _lightPosition.Y, _lightPosition.Z));
             _shader.SetUniform("uView", view);
             _shader.SetUniform("uProjection", projection);
             
+            _gl.Disable(GLEnum.CullFace);
             //We're drawing with just vertices and no indices, and it takes 36 vertices to have a six-sided textured cube
             _gl.DrawArrays(PrimitiveType.Triangles, 0, 36);
 
             _gl.Enable(GLEnum.CullFace);
             _gl.CullFace(CullFaceMode.Back);
+            
+            _texture.Bind(TextureUnit.Texture0);
+            _textureBump.Bind(TextureUnit.Texture1);
+            
             _terrain.Bind();
             _terrainShader.Use();
             _terrainShader.SetUniform("uModel", model);
             _terrainShader.SetUniform("uView", view);
             _terrainShader.SetUniform("uProjection", projection);
-            _terrainShader.SetUniform("uCameraPosition", _camera.CameraPosition);
-            _terrainShader.SetUniform("specular_coefficient", 0.2f);
-            _terrainShader.SetUniform("shininess", 3.0f);
-            _terrainShader.SetUniform("specular_color", new Vector3(0.992f, 0.984f, 0.827f));
+            _terrainShader.SetUniform("uCameraPosition", _camera.Position);
+            _terrainShader.SetUniform("specular_coefficient", 0.1f);
+            _terrainShader.SetUniform("shininess", 0.01f);
+            _terrainShader.SetUniform("specular_color", new Vector3(0.192f, 0.1984f, 0.1827f));
+            _terrainShader.SetUniform("light_position", _lightPosition);
+            _terrainShader.SetUniform("Texture0", 0);
+            _terrainShader.SetUniform("Texture1", 1);
+            _terrainShader.SetUniform("deltaTime", (float)deltaTime);
             _terrain.Render();
         }
 
         private static unsafe void OnMouseMove(IMouse mouse, Vector2 position)
         {
             var lookSensitivity = 0.1f;
-            if (_lastMousePosition == default) { _lastMousePosition = position; }
+
+
+            if (_lastMousePosition == default)
+            {
+                _lastMousePosition = position;
+            }
             else
             {
                 var xOffset = (position.X - _lastMousePosition.X) * lookSensitivity;
                 var yOffset = (position.Y - _lastMousePosition.Y) * lookSensitivity;
                 _lastMousePosition = position;
 
-                _camera.CameraYaw += xOffset;
-                _camera.CameraPitch -= yOffset;
+                if (mouse.IsButtonPressed(MouseButton.Left))
+                {
+                  
+                    _lightPosition.X -= Vector3.Normalize(new Vector3(_camera.Direction.X, 0, _camera.Direction.Z)).X * yOffset*1.5f;
+                    _lightPosition.Z += Vector3.Normalize(new Vector3(_camera.Direction.X, 0, _camera.Direction.Z)).Z * xOffset;
+                }
+                else if (mouse.IsButtonPressed(MouseButton.Right))
+                {
+                    _lightPosition.Y += yOffset;
+                }
+                else
+                {
+                    _camera.Yaw += xOffset;
+                    _camera.Pitch -= yOffset;
 
-                //We don't want to be able to look behind us by going over our head or under our feet so make sure it stays within these bounds
-                _camera.CameraPitch = Math.Clamp(_camera.CameraPitch, -89.0f, 89.0f);
+                    //We don't want to be able to look behind us by going over our head or under our feet so make sure it stays within these bounds
+                    _camera.Pitch = Math.Clamp(_camera.Pitch, -89.0f, 89.0f);
 
-                _camera.CameraDirection = new Vector3(
-                    MathF.Cos(MathHelper.DegreesToRadians(_camera.CameraYaw)) * MathF.Cos(MathHelper.DegreesToRadians(_camera.CameraPitch)),
-                    MathF.Sin(MathHelper.DegreesToRadians(_camera.CameraPitch)),
-                    MathF.Sin(MathHelper.DegreesToRadians(_camera.CameraYaw)) * MathF.Cos(MathHelper.DegreesToRadians(_camera.CameraPitch)));
-                _camera.CameraFront = Vector3.Normalize(_camera.CameraDirection);
+                    _camera.Direction = new Vector3(
+                        MathF.Cos(MathHelper.DegreesToRadians(_camera.Yaw)) *
+                        MathF.Cos(MathHelper.DegreesToRadians(_camera.Pitch)),
+                        MathF.Sin(MathHelper.DegreesToRadians(_camera.Pitch)),
+                        MathF.Sin(MathHelper.DegreesToRadians(_camera.Yaw)) *
+                        MathF.Cos(MathHelper.DegreesToRadians(_camera.Pitch)));
+                    _camera.Front = Vector3.Normalize(_camera.Direction);
+                }
             }
         }
 
         private static unsafe void OnMouseWheel(IMouse mouse, ScrollWheel scrollWheel)
         {
             //We don't want to be able to zoom in too close or too far away so clamp to these values
-            _camera.CameraZoom = Math.Clamp(_camera.CameraZoom - scrollWheel.Y, 1.0f, 45f);
+            _camera.Zoom = Math.Clamp(_camera.Zoom - scrollWheel.Y, 1.0f, 45f);
         }
 
         private static void OnClose()
